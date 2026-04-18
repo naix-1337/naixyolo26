@@ -1,0 +1,13 @@
+{
+    "include": ["ultralytics"],
+    "executionEnvironments": [
+        {
+            "root": ".",
+            "extraPaths": ["."]
+        }
+    ],
+    "pythonVersion": "3.10",
+    "pythonPlatform": "Windows",
+    "venvPath": "d:\\miniconda\\envs",
+    "venv": "yolo26"
+}
