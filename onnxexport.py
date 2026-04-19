@@ -1,5 +1,6 @@
 import torch
 import onnx
+# 修正后的导入方式
 from onnxsim import simplify
 
 model = torch.load("yolo26n.pt", weights_only=False)
