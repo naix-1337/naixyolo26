@@ -1,11 +1,12 @@
-import torch
 import onnx
+import torch
+
 # 修正后的导入方式
 from onnxsim import simplify
 
 model = torch.load("yolo26n.pt", weights_only=False)
 if type(model) is dict:
-    model = model['model']  # Ultralytics 的 pt 文件实际是个字典，包含配套的信息，模型对象藏在 'model' 键里
+    model = model["model"]  # Ultralytics 的 pt 文件实际是个字典，包含配套的信息，模型对象藏在 'model' 键里
 model = model.eval().cuda().float()
 
 # 1650 Ti 只有 4G 显存，必须锁死 Batch_Size = 1
@@ -18,8 +19,8 @@ torch.onnx.export(
     dummy_input,
     onnx_path,
     export_params=True,
-    opset_version=17,          
-    do_constant_folding=True,  
+    opset_version=17,
+    do_constant_folding=True,
     input_names=["images"],
     output_names=["output0"],
     # 绝对不要加 dynamic_axes，1650Ti 承受不起动态图的显存碎片
