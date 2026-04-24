@@ -1,26 +1,23 @@
 import ctypes
 import os
-import pynput
 import winsound
+
+import pynput
 
 try:
     root = os.path.abspath(os.path.dirname(__file__))
-    driver = ctypes.CDLL(f'{root}/logitech.driver.dll')
+    driver = ctypes.CDLL(f"{root}/logitech.driver.dll")
     print(driver)
     ok = driver.device_open() == 1  # 该驱动每个进程可打开一个实例
     if not ok:
-        print('Error, GHUB or LGS driver not found')
+        print("Error, GHUB or LGS driver not found")
 except FileNotFoundError:
-    print(f'Error, DLL file not found')
+    print("Error, DLL file not found")
 
 
 class Logitech:
-
     class mouse:
-
-        """
-        code: 1:左键, 2:中键, 3:右键
-        """
+        """Code: 1:左键, 2:中键, 3:右键."""
 
         @staticmethod
         def press(code):
@@ -43,20 +40,15 @@ class Logitech:
 
         @staticmethod
         def scroll(a):
-            """
-            a:没搞明白
-            """
+            """A:没搞明白."""
             if not ok:
                 return
             driver.scroll(a)
 
         @staticmethod
         def move(x, y):
-            """
-            相对移动, 绝对移动需配合 pywin32 的 win32gui 中的 GetCursorPos 计算位置
-            pip install pywin32 -i https://pypi.tuna.tsinghua.edu.cn/simple
-            x: 水平移动的方向和距离, 正数向右, 负数向左
-            y: 垂直移动的方向和距离
+            """相对移动, 绝对移动需配合 pywin32 的 win32gui 中的 GetCursorPos 计算位置 pip install pywin32 -i
+            https://pypi.tuna.tsinghua.edu.cn/simple x: 水平移动的方向和距离, 正数向右, 负数向左 y: 垂直移动的方向和距离.
             """
             if not ok:
                 return
@@ -65,10 +57,7 @@ class Logitech:
             driver.moveR(x, y, True)
 
     class keyboard:
-
-        """
-        键盘按键函数中，传入的参数采用的是键盘按键对应的键码
-        code: 'a'-'z':A键-Z键, '0'-'9':0-9, 其他的没猜出来
+        """键盘按键函数中，传入的参数采用的是键盘按键对应的键码 code: 'a'-'z':A键-Z键, '0'-'9':0-9, 其他的没猜出来.
         """
 
         @staticmethod
@@ -92,7 +81,7 @@ class Logitech:
             driver.key_up(code)
 
 
-if __name__ == '__main__':  # 测试
+if __name__ == "__main__":  # 测试
     winsound.Beep(800, 200)
 
     def release(key):
@@ -105,5 +94,3 @@ if __name__ == '__main__':  # 测试
 
     with pynput.keyboard.Listener(on_release=release) as k:
         k.join()
-
-
