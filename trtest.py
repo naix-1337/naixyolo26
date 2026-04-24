@@ -1,5 +1,4 @@
 import tensorrt as trt
-import os
 
 # 1. 显式设置日志记录器
 logger = trt.Logger(trt.Logger.INFO)
@@ -18,7 +17,7 @@ def build_engine(onnx_file_path, engine_file_path):
     if builder.platform_has_fast_fp16:
         config.set_flag(trt.BuilderFlag.FP16)
 
-    with open(onnx_file_path, 'rb') as model:
+    with open(onnx_file_path, "rb") as model:
         if not parser.parse(model.read()):
             for error in range(parser.num_errors):
                 print(parser.get_error(error))
@@ -28,7 +27,7 @@ def build_engine(onnx_file_path, engine_file_path):
     print("正在构建 Engine，这可能需要几分钟，请不要关闭窗口...")
     serialized_engine = builder.build_serialized_network(network, config)
 
-    with open(engine_file_path, 'wb') as f:
+    with open(engine_file_path, "wb") as f:
         f.write(serialized_engine)
     print(f"导出成功: {engine_file_path}")
 
