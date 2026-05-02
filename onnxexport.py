@@ -3,7 +3,7 @@ import onnx
 # 修正后的导入方式
 from onnxsim import simplify
 
-model = torch.load("yolo26n.pt", weights_only=False)
+model = torch.load("mrzh759s.pt", weights_only=False)
 if type(model) is dict:
     model = model['model']  # Ultralytics 的 pt 文件实际是个字典，包含配套的信息，模型对象藏在 'model' 键里
 model = model.eval().cuda().float()
@@ -12,7 +12,7 @@ model = model.eval().cuda().float()
 # 如果 640x640 跑起来显存吃紧，甚至可以降级到 416x416 或 512x512
 dummy_input = torch.randn(1, 3, 640, 640, device="cuda").float()
 
-onnx_path = "yolo26n_1650ti.onnx"
+onnx_path = "mrzh759s.onnx"
 torch.onnx.export(
     model,
     dummy_input,
@@ -29,4 +29,4 @@ torch.onnx.export(
 onnx_model = onnx.load(onnx_path)
 model_simp, check = simplify(onnx_model)
 assert check, "ONNX 化简失败"
-onnx.save(model_simp, "yolo26s_1650ti_sim.onnx")
+onnx.save(model_simp, "mrzh759s_sim.onnx")
