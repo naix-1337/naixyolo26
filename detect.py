@@ -167,64 +167,69 @@ def capture_worker(buffer, capture_region, stop_event):
 
 
 def run_detection(capture_region, debug=True):
-    """主检测入口：加载模型 → 预热 → 循环截屏推理 → 鼠标控制
-
-    参数:
-        capture_region: 截屏区域 (left, top, right, bottom)
-        debug: 是否显示 OpenCV 调试窗口
-    """
+    """主检测入口：加载模型 → 预热 → 启动截图线程 → 循环推理 + 显示"""
     model = load_model()
     warmup_model(model, capture_region)
 
     if debug:
         setup_debug_window()
 
+    buffer = FrameBuffer()
+    stop_event = threading.Event()
+    capture_thread = threading.Thread(
+        target=capture_worker,
+        args=(buffer, capture_region, stop_event),
+        daemon=True,
+    )
+    capture_thread.start()
+
     print(f"准备开始检测，截取区域: {capture_region}")
-    print("开始截图和推理，按 'q' 键退出...")
+    print("按 'q' 键退出...")
 
     mouse_ctrl = MouseController()
     prev_time = time.perf_counter()
     frame_count = 0
 
-    for frame in capture_screen_iter(region=capture_region):
-        frame_start_time = time.perf_counter()
-        frame_count += 1
+    try:
+        while True:
+            frame_start_time = time.perf_counter()
 
-        # 计算当前帧率（基于两次帧到达的时间间隔）
-        fps = 1 / (frame_start_time - prev_time) if frame_start_time - prev_time > 0 else 0
-        prev_time = frame_start_time
+            frame = buffer.get()
+            if frame is None:
+                time.sleep(0.001)
+                continue
 
-        # YOLO 推理
-        results = model.predict(source=frame, conf=CONFIDENCE_THRESHOLD, classes=DETECTION_CLASSES, verbose=False)
+            frame_count += 1
+            fps = 1 / (frame_start_time - prev_time) if (frame_start_time - prev_time) > 0 else 0
+            prev_time = frame_start_time
 
-        # 找出离鼠标最近的目标并更新瞄准器
-        mouse_x, mouse_y = mouse_ctrl.mouse_ctl.position
-        boxes = results[0].boxes
-        closest_center = _find_closest_target(boxes, mouse_x, mouse_y, capture_region)
+            results = model.predict(source=frame, conf=CONFIDENCE_THRESHOLD, classes=DETECTION_CLASSES, verbose=False)
 
-        if closest_center:
-            mouse_ctrl.update_target(closest_center[0], closest_center[1], capture_region[0], capture_region[1])
-            print(f"🎯 最近类型2目标的中心坐标: ({closest_center[0]:.1f}, {closest_center[1]:.1f})")
-        else:
-            mouse_ctrl.update_target(None, None, capture_region[0], capture_region[1])
+            mouse_x, mouse_y = mouse_ctrl.mouse_ctl.position
+            boxes = results[0].boxes
+            closest_center = _find_closest_target(boxes, mouse_x, mouse_y, capture_region)
 
-        # 计算推理延迟
-        inference_end_time = time.perf_counter()
-        latency_ms = (inference_end_time - frame_start_time) * 1000
+            if closest_center:
+                mouse_ctrl.update_target(closest_center[0], closest_center[1], capture_region[0], capture_region[1])
+            else:
+                mouse_ctrl.update_target(None, None, capture_region[0], capture_region[1])
 
+            latency_ms = (time.perf_counter() - frame_start_time) * 1000
+
+            if debug:
+                annotated_frame = _render_frame(frame, boxes, fps, latency_ms)
+                cv2.imshow(DEBUG_WINDOW_NAME, annotated_frame)
+                if frame_count % TOPMOST_INTERVAL == 0:
+                    cv2.setWindowProperty(DEBUG_WINDOW_NAME, cv2.WND_PROP_TOPMOST, 1)
+
+            if _check_exit(debug):
+                break
+    finally:
+        stop_event.set()
+        capture_thread.join(timeout=2)
         if debug:
-            # 绘制检测结果并显示
-            annotated_frame = _render_frame(frame, boxes, fps, latency_ms)
-            cv2.imshow(DEBUG_WINDOW_NAME, annotated_frame)
-            if frame_count % TOPMOST_INTERVAL == 0:
-                cv2.setWindowProperty(DEBUG_WINDOW_NAME, cv2.WND_PROP_TOPMOST, 1)
-
-        if _check_exit(debug):
-            break
-
-    if debug:
-        cv2.destroyAllWindows()
-    mouse_ctrl.stop()
+            cv2.destroyAllWindows()
+        mouse_ctrl.stop()
 
 
 if __name__ == "__main__":
