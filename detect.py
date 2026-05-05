@@ -196,6 +196,9 @@ def run_detection(capture_region, debug=True):
 
             frame = buffer.get()
             if frame is None:
+                if not capture_thread.is_alive():
+                    print("错误：Capture 线程已终止")
+                    break
                 time.sleep(0.001)
                 continue
 
