@@ -152,9 +152,9 @@ def _check_exit(debug):
 def capture_worker(buffer, capture_region, stop_event):
     """独立线程：持续抓取屏幕帧并写入 FrameBuffer"""
     camera = dxcam.create(region=capture_region, output_color="BGR")
-    camera.start(target_fps=120, video_mode=True)
-    print("Capture 线程已启动")
     try:
+        camera.start(target_fps=120, video_mode=True)
+        print("Capture 线程已启动")
         while not stop_event.is_set():
             frame = camera.get_latest_frame()
             if frame is not None:
@@ -163,7 +163,6 @@ def capture_worker(buffer, capture_region, stop_event):
                 time.sleep(0.001)
     finally:
         camera.stop()
-        del camera
         print("Capture 线程已退出")
 
 
