@@ -1,4 +1,5 @@
-from PySide6.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QLabel
+import sys
+from PySide6.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QLabel
 from PySide6.QtCore import QThread, Signal, Qt
 
 from main import main as run_main
@@ -16,7 +17,7 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("YOLO Launcher")
-        self.setFixedSize(300, 150)
+        self.setFixedSize(300, 200)
 
         layout = QVBoxLayout()
         layout.setAlignment(Qt.AlignCenter)
@@ -25,10 +26,20 @@ class MainWindow(QWidget):
         self.label.setAlignment(Qt.AlignCenter)
         layout.addWidget(self.label)
 
+        btn_layout = QHBoxLayout()
+        btn_layout.setAlignment(Qt.AlignCenter)
+
         self.start_btn = QPushButton("Start")
         self.start_btn.setFixedSize(120, 40)
         self.start_btn.clicked.connect(self.on_start)
-        layout.addWidget(self.start_btn, alignment=Qt.AlignCenter)
+        btn_layout.addWidget(self.start_btn)
+
+        self.shutdown_btn = QPushButton("Shutdown")
+        self.shutdown_btn.setFixedSize(120, 40)
+        self.shutdown_btn.clicked.connect(self.on_shutdown)
+        btn_layout.addWidget(self.shutdown_btn)
+
+        layout.addLayout(btn_layout)
 
         self.setLayout(layout)
         self.thread = None
@@ -42,6 +53,9 @@ class MainWindow(QWidget):
         self.thread = DetectionThread()
         self.thread.finished.connect(self.on_finished)
         self.thread.start()
+
+    def on_shutdown(self):
+        sys.exit(0)
 
     def on_finished(self):
         self.start_btn.setEnabled(True)
