@@ -3,7 +3,9 @@ import time  # 高精度计时（perf_counter）
 import numpy as np  # 数组操作，构造空帧
 import msvcrt  # 无窗口模式下的键盘输入检测（Windows）
 from ultralytics import YOLO  # YOLO 推理引擎
-from ScreenCapture import capture_screen_iter  # DXCam 屏幕捕获迭代器
+import threading  # 多线程：Capture 线程 + FrameBuffer 锁
+import dxcam  # DXCam 屏幕捕获（Capture 线程内使用）
+
 from mouse_controller import MouseController  # 鼠标瞄准控制器
 
 # ==================== 模型与推理配置 ====================
