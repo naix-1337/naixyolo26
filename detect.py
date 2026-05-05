@@ -21,6 +21,26 @@ DEBUG_WINDOW_SIZE = (320, 320)  # 调试窗口的初始尺寸
 TOPMOST_INTERVAL = 30  # 每隔多少帧强制置顶一次窗口（防止被其他窗口遮盖）
 
 
+class FrameBuffer:
+    """线程安全的单帧缓冲区：Capture 线程写入，主线程读取最新帧"""
+
+    def __init__(self):
+        self._frame = None
+        self._lock = threading.Lock()
+
+    def set(self, frame):
+        """Capture 线程调用：无阻塞覆盖写入最新帧"""
+        with self._lock:
+            self._frame = frame
+
+    def get(self):
+        """主线程调用：取走当前最新帧并清空缓冲区，返回 None 表示尚无帧"""
+        with self._lock:
+            f = self._frame
+            self._frame = None
+            return f
+
+
 def load_model():
     """加载 YOLO 模型并返回模型对象"""
     print("加载 YOLO 模型...")
