@@ -1,15 +1,42 @@
 import sys
-from PySide6.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QLabel
+from PySide6.QtWidgets import (
+    QApplication, QWidget, QPushButton, QVBoxLayout,
+    QHBoxLayout, QLabel, QTextEdit,
+)
 from PySide6.QtCore import QThread, Signal, Qt
+from PySide6.QtGui import QTextCursor
 
 from main import main as run_main
 
 
 class DetectionThread(QThread):
     finished = Signal()
+    log = Signal(str)
 
     def run(self):
-        run_main()
+        _orig_stdout = sys.stdout
+        _orig_stderr = sys.stderr
+
+        class _Emitter:
+            def __init__(self, signal, orig):
+                self.signal = signal
+                self.orig = orig
+
+            def write(self, text):
+                if text:
+                    self.signal.emit(text)
+                self.orig.write(text)
+
+            def flush(self):
+                self.orig.flush()
+
+        sys.stdout = _Emitter(self.log, _orig_stdout)
+        sys.stderr = _Emitter(self.log, _orig_stderr)
+        try:
+            run_main()
+        finally:
+            sys.stdout = _orig_stdout
+            sys.stderr = _orig_stderr
         self.finished.emit()
 
 
@@ -17,10 +44,9 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("YOLO Launcher")
-        self.setFixedSize(300, 200)
+        self.setFixedSize(500, 400)
 
         layout = QVBoxLayout()
-        layout.setAlignment(Qt.AlignCenter)
 
         self.label = QLabel("Click Start to launch YOLO")
         self.label.setAlignment(Qt.AlignCenter)
@@ -41,6 +67,10 @@ class MainWindow(QWidget):
 
         layout.addLayout(btn_layout)
 
+        self.log_box = QTextEdit()
+        self.log_box.setReadOnly(True)
+        layout.addWidget(self.log_box)
+
         self.setLayout(layout)
         self.thread = None
 
@@ -51,11 +81,16 @@ class MainWindow(QWidget):
         self.showMinimized()
 
         self.thread = DetectionThread()
+        self.thread.log.connect(self.append_log)
         self.thread.finished.connect(self.on_finished)
         self.thread.start()
 
     def on_shutdown(self):
         sys.exit(0)
+
+    def append_log(self, text):
+        self.log_box.moveCursor(QTextCursor.End)
+        self.log_box.insertPlainText(text)
 
     def on_finished(self):
         self.start_btn.setEnabled(True)

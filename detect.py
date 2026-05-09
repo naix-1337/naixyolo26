@@ -116,23 +116,23 @@ def _find_closest_target(boxes, mouse_x, mouse_y, capture_region):
     return None
 
 
-def _render_frame(frame, boxes, fps, latency_ms):
-    """在帧上绘制检测框和性能信息，返回标注后的图像
+def _render_frame(result, fps, latency_ms):
+    """用 YOLO 内置的 plot() 绘制检测框和标签，再叠加性能信息及人物中心点
 
     参数:
-        frame: 原始 BGR 帧
-        boxes: YOLO 检测结果的 boxes 对象（用于绘制边框）
+        result: YOLO 推理结果对象（Results）
         fps: 当前帧率
         latency_ms: 推理延迟（毫秒）
     """
-    annotated_frame = frame.copy()
-    if boxes is not None and len(boxes) > 0:
-        # 将边框坐标转换为整数并逐个绘制矩形
-        xyxy_np = boxes.xyxy.cpu().numpy().astype(int)
-        for (x1, y1, x2, y2) in xyxy_np:
-            cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-
-    # 左上角叠加 FPS 和延迟信息
+    annotated_frame = result.plot()
+    if result.boxes is not None:
+        boxes = result.boxes
+        person_mask = boxes.cls == 2
+        if person_mask.sum() > 0:
+            xyxy = boxes.xyxy[person_mask]
+            centers = ((xyxy[:, :2] + xyxy[:, 2:]) / 2).cpu().numpy().astype(int)
+            for cx, cy in centers:
+                cv2.circle(annotated_frame, (cx, cy), 4, (0, 0, 255), -1)
     cv2.putText(annotated_frame, f"FPS: {int(fps)}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
     cv2.putText(annotated_frame, f"Time: {latency_ms:.1f} ms", (10, 65), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
     return annotated_frame
@@ -222,7 +222,7 @@ def run_detection(capture_region, debug=True):
             latency_ms = (time.perf_counter() - frame_start_time) * 1000
 
             if debug:
-                annotated_frame = _render_frame(frame, boxes, fps, latency_ms)
+                annotated_frame = _render_frame(results[0], fps, latency_ms)
                 cv2.imshow(DEBUG_WINDOW_NAME, annotated_frame)
                 if frame_count % TOPMOST_INTERVAL == 0:
                     cv2.setWindowProperty(DEBUG_WINDOW_NAME, cv2.WND_PROP_TOPMOST, 1)
