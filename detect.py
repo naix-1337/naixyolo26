@@ -9,7 +9,7 @@ import dxcam  # DXCam 屏幕捕获（Capture 线程内使用）
 from mouse_controller import MouseController  # 鼠标瞄准控制器
 
 # ==================== 模型与推理配置 ====================
-MODEL_PATH = "mrzh759s.onnx"  # ONNX 模型文件路径
+MODEL_PATH = "mrzh759s.engine"  # ONNX 模型文件路径
 DETECTION_CLASSES = [0, 1, 2]  # 需要检测的类别 ID 列表
 CONFIDENCE_THRESHOLD = 0.3  # 推理置信度阈值，低于此值的结果被过滤
 WARMUP_ITERATIONS = 10  # 模型预热时的推理次数
@@ -116,14 +116,7 @@ def _find_closest_target(boxes, mouse_x, mouse_y, capture_region):
     return None
 
 
-def _render_frame(result, fps, latency_ms):
-    """用 YOLO 内置的 plot() 绘制检测框和标签，再叠加性能信息及人物中心点
-
-    参数:
-        result: YOLO 推理结果对象（Results）
-        fps: 当前帧率
-        latency_ms: 推理延迟（毫秒）
-    """
+def _render_frame(result, fps, latency_ms, frame_count=0):
     annotated_frame = result.plot()
     if result.boxes is not None:
         boxes = result.boxes
@@ -133,9 +126,15 @@ def _render_frame(result, fps, latency_ms):
             centers = ((xyxy[:, :2] + xyxy[:, 2:]) / 2).cpu().numpy().astype(int)
             for cx, cy in centers:
                 cv2.circle(annotated_frame, (cx, cy), 4, (0, 0, 255), -1)
-    cv2.putText(annotated_frame, f"FPS: {int(fps)}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-    cv2.putText(annotated_frame, f"Time: {latency_ms:.1f} ms", (10, 65), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+    if frame_count % 60 == 0:
+        _render_frame._fps = int(fps)
+        _render_frame._latency = latency_ms
+    cv2.putText(annotated_frame, f"FPS: {_render_frame._fps}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+    cv2.putText(annotated_frame, f"Time: {_render_frame._latency:.1f} ms", (10, 65), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
     return annotated_frame
+
+_render_frame._fps = 0
+_render_frame._latency = 0.0
 
 
 def _check_exit(debug):
@@ -222,7 +221,7 @@ def run_detection(capture_region, debug=True):
             latency_ms = (time.perf_counter() - frame_start_time) * 1000
 
             if debug:
-                annotated_frame = _render_frame(results[0], fps, latency_ms)
+                annotated_frame = _render_frame(results[0], fps, latency_ms, frame_count)
                 cv2.imshow(DEBUG_WINDOW_NAME, annotated_frame)
                 if frame_count % TOPMOST_INTERVAL == 0:
                     cv2.setWindowProperty(DEBUG_WINDOW_NAME, cv2.WND_PROP_TOPMOST, 1)
