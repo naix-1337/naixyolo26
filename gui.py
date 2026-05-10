@@ -1,6 +1,7 @@
 import sys
+import threading
 from PySide6.QtWidgets import (
-    QApplication, QWidget, QPushButton, QVBoxLayout,
+    QApplication, QWidget, QPushButton, QCheckBox, QVBoxLayout,
     QHBoxLayout, QLabel, QTextEdit,
 )
 from PySide6.QtCore import QThread, Signal, Qt
@@ -12,6 +13,11 @@ from main import main as run_main
 class DetectionThread(QThread):
     finished = Signal()
     log = Signal(str)
+
+    def __init__(self, debug=True):
+        super().__init__()
+        self.debug = debug
+        self.stop_event = threading.Event()
 
     def run(self):
         _orig_stdout = sys.stdout
@@ -33,7 +39,7 @@ class DetectionThread(QThread):
         sys.stdout = _Emitter(self.log, _orig_stdout)
         sys.stderr = _Emitter(self.log, _orig_stderr)
         try:
-            run_main()
+            run_main(debug=self.debug, stop_event=self.stop_event)
         finally:
             sys.stdout = _orig_stdout
             sys.stderr = _orig_stderr
@@ -51,6 +57,10 @@ class MainWindow(QWidget):
         self.label = QLabel("Click Start to launch YOLO")
         self.label.setAlignment(Qt.AlignCenter)
         layout.addWidget(self.label)
+
+        self.debug_cb = QCheckBox("Debug Mode")
+        self.debug_cb.setChecked(True)
+        layout.addWidget(self.debug_cb)
 
         btn_layout = QHBoxLayout()
         btn_layout.setAlignment(Qt.AlignCenter)
@@ -80,13 +90,16 @@ class MainWindow(QWidget):
         self.label.setText("Detection running — press Q to stop")
         self.showMinimized()
 
-        self.thread = DetectionThread()
+        self.thread = DetectionThread(debug=self.debug_cb.isChecked())
         self.thread.log.connect(self.append_log)
         self.thread.finished.connect(self.on_finished)
         self.thread.start()
 
     def on_shutdown(self):
-        sys.exit(0)
+        if self.thread is not None and self.thread.isRunning():
+            self.thread.stop_event.set()
+            self.thread.wait()
+            self.on_finished()
 
     def append_log(self, text):
         self.log_box.moveCursor(QTextCursor.End)

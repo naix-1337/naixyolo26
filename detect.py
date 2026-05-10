@@ -167,7 +167,7 @@ def capture_worker(buffer, capture_region, stop_event):
         print("Capture 线程已退出")
 
 
-def run_detection(capture_region, debug=True):
+def run_detection(capture_region, debug=True, stop_event=None):
     """主检测入口：加载模型 → 预热 → 启动截图线程 → 循环推理 + 显示"""
     model = load_model()
     warmup_model(model, capture_region)
@@ -176,7 +176,8 @@ def run_detection(capture_region, debug=True):
         setup_debug_window()
 
     buffer = FrameBuffer()
-    stop_event = threading.Event()
+    if stop_event is None:
+        stop_event = threading.Event()
     capture_thread = threading.Thread(
         target=capture_worker,
         args=(buffer, capture_region, stop_event),
@@ -192,7 +193,7 @@ def run_detection(capture_region, debug=True):
     frame_count = 0
 
     try:
-        while True:
+        while not stop_event.is_set():
             frame_start_time = time.perf_counter()
 
             frame = buffer.get()

@@ -1,6 +1,6 @@
 from detect import run_detection
 
-def main():
+def main(debug=True, stop_event=None):
     # 屏幕分辨率是 1920x1080
     # 定义要截取的区域 (left, top, right, bottom)
     # 这里我们截取全屏的中心区域，宽 320，高 320
@@ -12,11 +12,9 @@ def main():
     capture_region = (640, 220, 1280, 860)
     # capture_region = (800, 380, 1120, 700)
     
-    DEBUG_MODE = True
-    
-    print(f"准备调用截屏并进行目标检测，截取区域: {capture_region}，调试模式: {DEBUG_MODE}")
+    print(f"准备调用截屏并进行目标检测，截取区域: {capture_region}，调试模式: {debug}")
     # 调用目标检测逻辑
-    run_detection(capture_region, debug=DEBUG_MODE)
+    run_detection(capture_region, debug=debug, stop_event=stop_event)
 
 if __name__ == "__main__":
     main()
