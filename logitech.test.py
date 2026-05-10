@@ -1,11 +1,15 @@
 import ctypes
 import os
+import sys
 import pynput
 import winsound
 
 try:
-    root = os.path.abspath(os.path.dirname(__file__))
-    driver = ctypes.CDLL(f'{root}/logitech.driver.dll')
+    if getattr(sys, 'frozen', False):
+        root = sys._MEIPASS
+    else:
+        root = os.path.dirname(os.path.abspath(__file__))
+    driver = ctypes.CDLL(os.path.join(root, 'logitech.driver.dll'))
     print(driver)
     ok = driver.device_open() == 1  # 该驱动每个进程可打开一个实例
     if not ok:

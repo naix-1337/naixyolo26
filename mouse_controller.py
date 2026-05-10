@@ -1,3 +1,4 @@
+import os
 import time
 import threading
 import importlib.util
@@ -6,7 +7,12 @@ from pynput import mouse
 from pid import PIDController
 
 # 动态加载存在特殊命名的 logitech.test.py 模块
-spec = importlib.util.spec_from_file_location("logitech_test", "logitech.test.py")
+if getattr(sys, 'frozen', False):
+    base_path = sys._MEIPASS
+else:
+    base_path = os.path.dirname(os.path.abspath(__file__))
+logitech_path = os.path.join(base_path, "logitech.test.py")
+spec = importlib.util.spec_from_file_location("logitech_test", logitech_path)
 logitech_test = importlib.util.module_from_spec(spec)
 sys.modules["logitech_test"] = logitech_test
 spec.loader.exec_module(logitech_test)
