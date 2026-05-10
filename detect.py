@@ -67,7 +67,7 @@ def setup_debug_window():
     cv2.setWindowProperty(DEBUG_WINDOW_NAME, cv2.WND_PROP_TOPMOST, 1)
 
 
-def _find_closest_target(boxes, mouse_x, mouse_y, capture_region, debug=False):
+def _find_closest_target(boxes, mouse_x, mouse_y, capture_region, debug=False, only_enemy=False):
     if len(boxes) == 0:
         return None
 
@@ -89,6 +89,25 @@ def _find_closest_target(boxes, mouse_x, mouse_y, capture_region, debug=False):
     # 只对类型 2 的目标计算与鼠标的最近距离
     if centers_by_cls[2] is not None:
         cls2_centers = centers_by_cls[2]
+
+        if only_enemy and centers_by_cls[1] is not None:
+            cls2_mask = cls_ids == 2
+            cls2_xyxy = xyxy[cls2_mask]
+            cls1_centers = centers_by_cls[1]
+            keep = []
+            for i in range(len(cls2_centers)):
+                x1, y1, x2, y2 = cls2_xyxy[i]
+                friendly = False
+                for c1 in cls1_centers:
+                    cx, cy = c1
+                    if x1 <= cx <= x2 and cy < y1:
+                        friendly = True
+                        break
+                keep.append(not friendly)
+            cls2_centers = cls2_centers[keep]
+            if len(cls2_centers) == 0:
+                return None
+
         # 将局部坐标转换为屏幕绝对坐标
         abs_centers_x = cls2_centers[:, 0] + capture_region[0]
         abs_centers_y = cls2_centers[:, 1] + capture_region[1]
@@ -155,7 +174,7 @@ def capture_worker(buffer, capture_region, stop_event):
         print("Capture 线程已退出")
 
 
-def run_detection(capture_region, debug=True, stop_event=None):
+def run_detection(capture_region, debug=True, only_enemy=False, stop_event=None):
     """主检测入口：加载模型 → 预热 → 启动截图线程 → 循环推理 + 显示"""
     model = load_model()
     warmup_model(model, capture_region)
@@ -200,7 +219,7 @@ def run_detection(capture_region, debug=True, stop_event=None):
 
             mouse_x, mouse_y = mouse_ctrl.mouse_ctl.position
             boxes = results[0].boxes
-            closest_center = _find_closest_target(boxes, mouse_x, mouse_y, capture_region, debug)
+            closest_center = _find_closest_target(boxes, mouse_x, mouse_y, capture_region, debug, only_enemy)
 
             if closest_center:
                 mouse_ctrl.update_target(closest_center[0], closest_center[1], capture_region[0], capture_region[1])

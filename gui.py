@@ -14,9 +14,10 @@ class DetectionThread(QThread):
     finished = Signal()
     log = Signal(str)
 
-    def __init__(self, debug=True):
+    def __init__(self, debug=True, only_enemy=False):
         super().__init__()
         self.debug = debug
+        self.only_enemy = only_enemy
         self.stop_event = threading.Event()
 
     def run(self):
@@ -39,7 +40,7 @@ class DetectionThread(QThread):
         sys.stdout = _Emitter(self.log, _orig_stdout)
         sys.stderr = _Emitter(self.log, _orig_stderr)
         try:
-            run_main(debug=self.debug, stop_event=self.stop_event)
+            run_main(debug=self.debug, only_enemy=self.only_enemy, stop_event=self.stop_event)
         finally:
             sys.stdout = _orig_stdout
             sys.stderr = _orig_stderr
@@ -61,6 +62,10 @@ class MainWindow(QWidget):
         self.debug_cb = QCheckBox("Debug Mode")
         self.debug_cb.setChecked(True)
         layout.addWidget(self.debug_cb)
+
+        self.onlyenemy_cb = QCheckBox("Only Enemy")
+        self.onlyenemy_cb.setChecked(False)
+        layout.addWidget(self.onlyenemy_cb)
 
         btn_layout = QHBoxLayout()
         btn_layout.setAlignment(Qt.AlignCenter)
@@ -90,7 +95,7 @@ class MainWindow(QWidget):
         self.label.setText("Detection running — press Q to stop")
         self.showMinimized()
 
-        self.thread = DetectionThread(debug=self.debug_cb.isChecked())
+        self.thread = DetectionThread(debug=self.debug_cb.isChecked(), only_enemy=self.onlyenemy_cb.isChecked())
         self.thread.log.connect(self.append_log)
         self.thread.finished.connect(self.on_finished)
         self.thread.start()
