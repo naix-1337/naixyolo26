@@ -1,0 +1,28 @@
+# Ultralytics YOLO Dependencies
+# Install: pip install -r requirements.txt
+
+# Base
+numpy>=1.23.0
+opencv-python>=4.6.0
+pillow>=7.1.2
+
+# YOLO & ML
+ultralytics>=8.4.0
+torch>=2.0.0
+torchvision>=0.15.0
+
+# GUI
+PySide6>=6.6.0
+
+# Screen capture (Windows)
+dxcam>=0.3.0
+
+# Mouse control
+pynput>=1.7.0
+
+# PID controller
+simple-pid>=2.0.0
+
+# Model export
+onnx>=1.15.0
+onnxsim>=0.4.0
