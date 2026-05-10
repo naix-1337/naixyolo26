@@ -67,34 +67,22 @@ def setup_debug_window():
     cv2.setWindowProperty(DEBUG_WINDOW_NAME, cv2.WND_PROP_TOPMOST, 1)
 
 
-def _find_closest_target(boxes, mouse_x, mouse_y, capture_region):
-    """在检测结果中按类别分组，找到离鼠标最近的类型 2 目标的中心坐标
-
-    参数:
-        boxes: YOLO 检测结果的 boxes 对象
-        mouse_x, mouse_y: 当前鼠标屏幕绝对坐标
-        capture_region: 截屏区域 (left, top, right, bottom)
-
-    返回:
-        (center_x, center_y) 或 None（无目标时）
-    """
+def _find_closest_target(boxes, mouse_x, mouse_y, capture_region, debug=False):
     if len(boxes) == 0:
         return None
 
-    # 提取边界框坐标和类别 ID
     xyxy = boxes.xyxy
     cls_ids = boxes.cls
-    # 向量化计算每个边界框的中心点
     centers = (xyxy[:, :2] + xyxy[:, 2:]) / 2.0
 
-    # 按类别分组，便于后续按类别筛选目标
     centers_by_cls = {}
     for cls_id in DETECTION_CLASSES:
         mask = cls_ids == cls_id
         if mask.sum() > 0:
             cls_centers = centers[mask]
             centers_by_cls[cls_id] = cls_centers
-            print(f"📦 类别 {cls_id} 目标数: {len(cls_centers)}, 中心: {[(f'{c[0]:.1f}', f'{c[1]:.1f}') for c in cls_centers]}")
+            if debug:
+                print(f"📦 类别 {cls_id} 目标数: {len(cls_centers)}, 中心: {[(f'{c[0]:.1f}', f'{c[1]:.1f}') for c in cls_centers]}")
         else:
             centers_by_cls[cls_id] = None
 
@@ -212,7 +200,7 @@ def run_detection(capture_region, debug=True, stop_event=None):
 
             mouse_x, mouse_y = mouse_ctrl.mouse_ctl.position
             boxes = results[0].boxes
-            closest_center = _find_closest_target(boxes, mouse_x, mouse_y, capture_region)
+            closest_center = _find_closest_target(boxes, mouse_x, mouse_y, capture_region, debug)
 
             if closest_center:
                 mouse_ctrl.update_target(closest_center[0], closest_center[1], capture_region[0], capture_region[1])
